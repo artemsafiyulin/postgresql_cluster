@@ -125,52 +125,6 @@ sudo_users:
 #    commands: "/usr/bin/find, /usr/bin/less, /usr/bin/tail, /bin/kill"
 
 
-# Firewall
-firewall_enabled_at_boot: false  # or 'true' for configure firewall (iptables)
-
-firewall_allowed_tcp_ports_for:
-  master: []
-  replica: []
-  pgbackrest: []
-  postgres_cluster:
-    - "{{ ansible_ssh_port | default(22) }}"
-    - "{{ postgresql_port }}"
-    - "{{ pgbouncer_listen_port }}"
-    - "{{ patroni_restapi_port }}"
-    - "19999"  # Netdata
-#    - "10050"  # Zabbix agent
-#    - ""
-  etcd_cluster:
-    - "{{ ansible_ssh_port | default(22) }}"
-    - "2379"  # ETCD port
-    - "2380"  # ETCD port
-#    - ""
-  consul_instances:
-    - 8300
-    - 8301
-    - 8302
-    - 8500
-    - 8600
-  balancers:
-    - "{{ ansible_ssh_port | default(22) }}"
-    - "{{ haproxy_listen_port.master }}"  # HAProxy (read/write) master
-    - "{{ haproxy_listen_port.replicas }}"  # HAProxy (read only) all replicas
-    - "{{ haproxy_listen_port.replicas_sync }}"  # HAProxy (read only) synchronous replica only
-    - "{{ haproxy_listen_port.replicas_async }}"  # HAProxy (read only) asynchronous replicas only
-    - "{{ haproxy_listen_port.stats }}"  # HAProxy stats
-#    - ""
-
-firewall_additional_rules_for:
-  master: []
-  replica: []
-  postgres_cluster: []
-  pgbackrest: []
-  etcd_cluster: []
-  consul_instances: []
-  balancers:
-    - "iptables -p vrrp -A INPUT -j ACCEPT"  # Keepalived (vrrp)
-    - "iptables -p vrrp -A OUTPUT -j ACCEPT"  # Keepalived (vrrp)
-
 # disable firewalld (installed by default on RHEL/CentOS) or ufw (installed by default on Ubuntu)
 firewall_disable_firewalld: true
 firewall_disable_ufw: true
@@ -187,26 +141,5 @@ copy_files_to_all_server: []
 #  - { src: "files/ssl-cert-snakeoil.pem", dest: "/etc/ssl/certs/ssl-cert-snakeoil.pem", owner: "postgres", group: "postgres", mode: "0644" }
 #  - { src: "files/ssl-cert-snakeoil.key", dest: "/etc/ssl/private/ssl-cert-snakeoil.key", owner: "postgres", group: "postgres", mode: "0600" }
 #  - { src: "files/myfile", dest: "/path/to/myfile", owner: "postgres", group: "postgres", mode: "0640" }
-
-# System cron jobs
-cron_jobs: []
-#  - name: "Example Job one"
-#    user: "postgres"
-#    file: /etc/cron.d/example_job_one
-#    minute: "00"
-#    hour: "1"
-#    day: "*"
-#    month: "*"
-#    weekday: "*"
-#    job: "echo 'example job one command'"
-#  - name: "Example Job two"
-#    user: "postgres"
-#    file: /etc/cron.d/example_job_two
-#    minute: "00"
-#    hour: "2"
-#    day: "*"
-#    month: "*"
-#    weekday: "*"
-#    job: "echo 'example job two command'"
 
 ...
