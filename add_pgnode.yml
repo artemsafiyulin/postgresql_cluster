@@ -93,35 +93,7 @@
         - ansible_os_family == "Debian"
         - installation_method == "repo"
 
-    - name: Build a firewall_ports_dynamic_var
-      ansible.builtin.set_fact:
-        firewall_ports_dynamic_var: "{{ firewall_ports_dynamic_var | default([]) + (firewall_allowed_tcp_ports_for[item] | default([])) }}"
-      loop: "{{ hostvars[inventory_hostname].group_names }}"
-      when:
-        - new_node | default(false) | bool
-        - firewall_enabled_at_boot | bool
-      tags: firewall
-
-    - name: Build a firewall_rules_dynamic_var
-      ansible.builtin.set_fact:
-        firewall_rules_dynamic_var: "{{ firewall_rules_dynamic_var | default([]) + (firewall_additional_rules_for[item] | default([])) }}"
-      loop: "{{ hostvars[inventory_hostname].group_names }}"
-      when:
-        - new_node | default(false) | bool
-        - firewall_enabled_at_boot | bool
-      tags: firewall
-
   roles:
-    - role: ansible-role-firewall
-      environment: "{{ proxy_env | default({}) }}"
-      vars:
-        firewall_allowed_tcp_ports: "{{ firewall_ports_dynamic_var | default([]) | unique }}"
-        firewall_additional_rules: "{{ firewall_rules_dynamic_var | default([]) | unique }}"
-      when:
-        - new_node | default(false) | bool
-        - firewall_enabled_at_boot | bool
-      tags: firewall
-
     - role: sysctl
       when:
         - new_node | default(false) | bool
@@ -159,12 +131,6 @@
       ansible.builtin.include_vars: "vars/{{ ansible_os_family }}.yml"
       tags: always
 
-    # if 'dcs_type' is 'consul'
-    - name: Add a nameserver entry poining to localhost for dnsmasq
-      ansible.builtin.set_fact:
-        nameservers: "{{ ['127.0.0.1'] + (nameservers | default([])) }}"
-      when: dcs_type == "consul" and consul_dnsmasq_enable | bool and ('127.0.0.1' not in (nameservers | default([])))
-
   roles:
     - role: hostname
     - role: resolv_conf
@@ -180,31 +146,6 @@
     - role: timezone
     - role: ntp
     - role: copy
-    - role: cron
-
-- name: add_pgnode.yml | Configure pgBackRest
-  hosts: pgbackrest:postgres_cluster
-  become: true
-  become_method: sudo
-  gather_facts: true
-  any_errors_fatal: true
-  pre_tasks:
-    - name: Include main variables
-      ansible.builtin.include_vars: "vars/main.yml"
-      tags: always
-
-    - name: Include OS-specific variables
-      ansible.builtin.include_vars: "vars/{{ ansible_os_family }}.yml"
-      tags: always
-
-  roles:
-    - role: pgbackrest
-      when: pgbackrest_install|bool
-
-- name: add_pgnode.yml | Import Consul playbook
-  ansible.builtin.import_playbook: consul.yml
-  when: dcs_type == "consul"
-  tags: consul
 
 - name: add_pgnode.yml | Add new PostgreSQL replica to the cluster
   hosts: new_replica
@@ -229,25 +170,12 @@
       tags: always
 
   roles:
-    - role: wal-g
-      when: wal_g_install|bool
-
-    - role: pg_probackup
-      when: pg_probackup_install|bool
-
     - role: pgbouncer
       when: pgbouncer_install|bool
 
     - role: pgpass
 
     - role: patroni
-
-    - role: vip-manager
-      when: not with_haproxy_load_balancing|bool and
-        (cluster_vip is defined and cluster_vip | length > 0)
-
-    - role: netdata
-      when: netdata_install is defined and netdata_install|bool
 
     # finish (info)
     - role: deploy-finish
